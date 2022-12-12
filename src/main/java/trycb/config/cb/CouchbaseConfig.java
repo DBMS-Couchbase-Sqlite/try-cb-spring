@@ -28,9 +28,9 @@ public class CouchbaseConfig {
         String userBucket = "user_profile";
 
         if (!cluster.buckets().getAllBuckets().containsKey(userBucket)) {
-            cluster.buckets().createBucket(BucketSettings.create(userBucket)
-                    .bucketType(BucketType.EPHEMERAL));
-                    //.ramQuotaMB(256));
+            cluster.buckets().createBucket(
+                    BucketSettings.create(userBucket).bucketType(BucketType.EPHEMERAL) //.ramQuotaMB(256)
+            );
         }
         return cluster.bucket(userBucket);
     }
