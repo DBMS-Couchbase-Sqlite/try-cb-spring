@@ -1,0 +1,34 @@
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+- name: Start Couchbase
+  init: ./startcb.sh
+- name: Log use
+  init: curl -s 'https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=java-transactions-quickstart-repo&source=gitpod' > /dev/null
+- name: Start app
+  command: ./mvnw spring-boot:run
+# exposed ports
+ports:
+- port: 8080
+  onOpen: open-preview
+- port: 8091
+  onOpen: open-browser
+- port: 8092-8999
+  onOpen: ignore
+- port: 9000-9999
+  onOpen: ignore
+- port: 4369
+  onOpen: ignore
+
+github:
+  prebuilds:
+    # enable for the master/default branch (defaults to true)
+    master: true
+
+vscode:
+  extensions:
+    - redhat.java
+    - vscjava.vscode-java-debug
+    - vscjava.vscode-java-test
+    - pivotal.vscode-spring-boot

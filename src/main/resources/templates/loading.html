@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/libs/select2/select2.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css"
+          rel="stylesheet">
+
+<script src="assets/js/jquery-2.2.4.min.js"></script>
+<link href="assets/libs/select2/select2.min.css" rel="stylesheet"/>
+<link href="assets/libs/select2/select2-bootstrap.min.css" rel="stylesheet"/>
+<script src="assets/libs/select2/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
+
+<style>
+
+    .row-flex {
+        display: flex;
+        flex-flow: row wrap;
+    }
+    .col-flex-item {
+        display: flex;
+        flex-flow: column;
+    }
+    .vertical-divider {
+        border-right: 1px solid #c0c0c0;
+    }
+</style>
+
+<body>
+
+<div class="wrapper">
+    <div class="container-fluid">
+        <!-- end row-->
+
+        <!-- start page title -->
+        <div class="row">
+            <div class="col-12">
+                <div class="page-title-box">
+                    <h2 class="page-title">Couchbase Transactions Example - Transfering Credits</h2>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+
+                        <br><hr><br>
+                        <br>
+                        <br>
+                        <div class="d-flex justify-content-center">
+                          Initializing database...
+                        </div>
+                        <br>
+                        <br>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+</div>
+
+
+<!-- end Footer -->
+
+<script th:inline="javascript">
+
+    // reload the page if no users (waiting for the data)
+    setTimeout(function() {
+        location.reload();
+    }, 1000);
+
+</script>
+
+
+</body>
+</html>

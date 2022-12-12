@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/libs/select2/select2.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css"
+          rel="stylesheet">
+
+<script src="assets/js/jquery-2.2.4.min.js"></script>
+<link href="assets/libs/select2/select2.min.css" rel="stylesheet"/>
+<link href="assets/libs/select2/select2-bootstrap.min.css" rel="stylesheet"/>
+<script src="assets/libs/select2/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
+
+<style>
+
+    .row-flex {
+        display: flex;
+        flex-flow: row wrap;
+    }
+    .col-flex-item {
+        display: flex;
+        flex-flow: column;
+    }
+    .vertical-divider {
+        border-right: 1px solid #c0c0c0;
+    }
+</style>
+
+<body>
+
+<div class="wrapper">
+    <div class="container-fluid">
+        <!-- end row-->
+
+        <!-- start page title -->
+        <div class="row">
+            <div class="col-12">
+                <div class="page-title-box">
+                    <h2 class="page-title">Couchbase Transactions Example - Transfering Credits</h2>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+
+                        <section class="container-fluid">
+                            <div class="row row-flex">
+                                <div class="col-md-6 col-flex-item vertical-divider">
+                                    <div class="col-md-12" style="padding-right:10%">
+                                        <div class="form-group">
+                                            <label for="sourceUser" class="control-label">Source User:</label>
+                                            <select class="form-control" data-live-search="true" id="sourceUser" required>
+                                                <option value="-1">Select a User</option>
+                                                <option th:each="ur: ${users}" th:value="${ur.id}"
+                                                        th:text="${ur.name + ' '+ ur.surname}"></option>
+                                            </select>
+                                        </div>
+                                        <div id="sourceUserCredit" style="display: none">
+                                            <div id="sourceUserCreditNumber" class="d-flex justify-content-center" style="font-size: 10em; margin-top: -40px">129</div>
+                                            <strong class="d-flex justify-content-center" style="margin-top: -40px">Credits</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-flex-item" style="padding-left:5%">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="targetUser" class="control-label">Target User:</label>
+                                            <select class="form-control" data-live-search="true" id="targetUser" required>
+                                                <option value="-1">Select a User</option>
+                                                <option th:each="ur: ${users}" th:value="${ur.id}"
+                                                        th:text="${ur.name + ' '+ ur.surname}"></option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="targetUserCredit" style="display: none">
+                                        <div id="targetUserCreditNumber" class="d-flex justify-content-center" style="font-size: 10em; margin-top: -200px">129</div>
+                                        <strong class="d-flex justify-content-center" style="margin-top: -40px">Credits</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <br><hr><br>
+                        <div id="showTransferResource" class="d-flex justify-content-center">
+                            <span style="font-size: 1.8em"> Transfer&nbsp;&nbsp;</span><input type="number" id="amountToTransfer" value="0" class="form-control" style="width: 5% !important"  >
+                            <span style="font-size: 1.8em">&nbsp;&nbsp;credits from&nbsp;</span>
+                            <span id="sourceUserName" style="font-size: 1.8em; color: #3bafda">nobody</span> <span style="font-size: 1.8em">&nbsp;to&nbsp;</span><span id="targetUserName" style="font-size: 1.8em; color: #3bafda">nobody</span>
+
+                        </div>
+                        <br>
+                        <br>
+                        <div class="d-flex justify-content-center">
+                            <a href="javascript:tranferCredits()" class="btn btn-primary btn-lg " id="transferButton" role="button">&nbsp;&nbsp;&nbsp;GO!&nbsp;&nbsp;&nbsp;</a>
+
+                        </div>
+                        <br>
+                        <br>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- end Footer -->
+
+<script th:inline="javascript">
+
+    var users = /*[[${users}]]*/ "";
+
+    $('#sourceUser').on('change', function() {
+
+            if(this.value == '-1' ) {
+                $("#sourceUserCredit").hide();
+                $("#sourceUserName").html("nobody");
+            } else {
+
+                for (const element of users) {
+
+                    if(element.id == this.value ) {
+                        if(element.credits == null) {
+                            element.credits = 0;
+                        }
+                        $("#sourceUserName").html(element.name+" "+element.surname);
+                        $("#sourceUserCreditNumber").html(element.credits);
+                        $("#sourceUserCredit").show();
+                        break;
+                    }
+                }
+            }
+
+        });
+
+    $('#targetUser').on('change', function() {
+
+            if(this.value == '-1' ) {
+                $("#targetUserCredit").hide();
+                $("#targetUserName").html("nobody");
+            } else {
+
+                for (const element of users) {
+                    if(element.id == this.value ) {
+                        if(element.credits == null) {
+                            element.credits = 0;
+                        }
+                        $("#targetUserName").html(element.name+" "+element.surname);
+                        $("#targetUserCreditNumber").html(element.credits);
+                        $("#targetUserCredit").show();
+                        break;
+                    }
+                }
+            }
+
+        });
+
+    function tranferCredits() {
+
+        if($("#sourceUser").val()== "-1") {
+            alert("Please inform the source user")
+            return;
+        }
+
+        if($("#targetUser").val()== "-1") {
+            alert("Please inform the target user")
+            return;
+        }
+
+        if($("#amountToTransfer").val() == 0) {
+            alert("Please inform the amount to be transfered")
+            return;
+        }
+
+        if($("#sourceUser").val() == $("#targetUser").val()){
+            return;
+        }
+
+        $("#transferButton").html('&nbsp;&nbsp;&nbsp;<div class="spinner-border text-light" role="status"></div>&nbsp;&nbsp;&nbsp;')
+
+        $.getJSON("/api/credit/transfer?sourceUser="+$("#sourceUser").val()
+            +"&targetUser="+$('#targetUser').val()+"&amount="+$("#amountToTransfer").val(),
+            function(data) {
+
+                if(!data) {
+                    alert("The operation has been reverted. Users can't have a negative balance.");
+                } else {
+                    for (const element of users) {
+
+                        if(element.id == $("#sourceUser").val() ) {
+                            var oldValue = element.credits;
+                            element.credits = parseInt(element.credits) - parseInt($("#amountToTransfer").val());
+                            animateValue("sourceUserCreditNumber", oldValue, element.credits , 500)
+                        }
+
+                        if(element.id == $("#targetUser").val() ) {
+                            var oldValue = element.credits;
+                            element.credits = parseInt(element.credits) + parseInt($("#amountToTransfer").val());
+                            console.log("oldCredits = "+oldValue+" newCredits"+ element.credits);
+                            animateValue("targetUserCreditNumber", oldValue, element.credits , 500)
+                        }
+                    }
+                }
+
+                $("#transferButton").html('&nbsp;&nbsp;&nbsp;GO!&nbsp;&nbsp;&nbsp;')
+            }
+        )
+    }
+
+    function animateValue(id, start, end, duration) {
+        var range = end - start;
+        var current = start;
+        var increment = end > start? 1 : -1;
+        var stepTime = Math.abs(Math.floor(duration / range));
+        var obj = document.getElementById(id);
+        var timer = setInterval(function() {
+            current += increment;
+            obj.innerHTML = current;
+            if (current == end) {
+                clearInterval(timer);
+            }
+        }, stepTime);
+    }
+
+</script>
+
+</body>
+</html>
