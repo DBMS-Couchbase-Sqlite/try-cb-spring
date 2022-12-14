@@ -173,18 +173,27 @@ public class TenantUser {
 
             changeUpdatedQuotas(updatedQuotas, t.getString("id"), t.getString("flight"), t.getString("utc"), t.getInt("day"));
         }
+        // all this must be in one transaction
 
+        // inner transaction
         userData.setFlightIds(allBookedFlights.toArray(new String[]{}));
-        userData.setCredits(remainingCredits);
-        userRepository.save(userData);
+        userData = userRepository.save(userData); // need to rolled back
+        //
 
-        transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price);
+        // inner transaction
+        userData.setCredits(remainingCredits);
+        userRepository.save(userData); // need to rolled back
+        transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price); // need to rolled back
+        //
+
+        // inner transaction
+        flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
+        //
 
         if (remainingCredits < 0) { // check after save to investigate transaction processing
             throw new IllegalArgumentException("Your credits is not enough!!!");
         }
-
-        flightPathService.updateQuotas(updatedQuotas);
+        //
 
         JsonObject responseData = JsonObject.create().put("added", added);
 
