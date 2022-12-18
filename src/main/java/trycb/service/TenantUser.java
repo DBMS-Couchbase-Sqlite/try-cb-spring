@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.UpsertOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -74,6 +75,9 @@ public class TenantUser {
         this.transferCreditService = transferCreditService;
         this.flightPathService = flightPathService;
     }
+
+    @Value("${sqlite.using}")
+    private boolean isUsingSqlite;
 
     /**
      * Try to log the given tenant user in.

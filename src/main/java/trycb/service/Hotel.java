@@ -22,20 +22,6 @@
 
 package trycb.service;
 
-import static com.couchbase.client.java.kv.LookupInSpec.get;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataRetrievalFailureException;
-import org.springframework.stereotype.Service;
-
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -47,17 +33,29 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.queries.ConjunctionQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
-
-import trycb.repository.HotelRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataRetrievalFailureException;
+import org.springframework.stereotype.Service;
 import trycb.model.Result;
+import trycb.repository.HotelRepository;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.couchbase.client.java.kv.LookupInSpec.get;
 
 @Service
 public class Hotel {
     private static final Logger LOGGER = LoggerFactory.getLogger(Hotel.class);
 
-    private HotelRepository hotelRepository;
-    private Cluster cluster;
-    private Bucket bucket;
+    private final HotelRepository hotelRepository;
+    private final Cluster cluster;
+    private final Bucket bucket;
 
     @Autowired
     public Hotel(HotelRepository hotelRepository) {
