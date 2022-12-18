@@ -24,15 +24,23 @@ package trycb.service;
 
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.transactions.AttemptContext;
+import com.couchbase.transactions.TransactionGetResult;
+import com.couchbase.transactions.Transactions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import trycb.config.Booking;
+import trycb.config.CreditUser;
 import trycb.config.User;
 import trycb.model.Result;
 import trycb.repository.BookingRepository;
@@ -47,7 +55,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import static trycb.repository.CreditUserRepository.AGENCY_MEMBERS;
 
 @Service
 public class TenantUser {
@@ -58,6 +70,9 @@ public class TenantUser {
     private final InferCreditService inferCreditService;
     private final TransferCreditService transferCreditService;
     private final FlightPath flightPathService;
+    private final Bucket userBucket;
+    private final Bucket travelBucket;
+    private final Transactions transactions;
 
     public TenantUser(
             TokenService tokenService,
@@ -66,7 +81,11 @@ public class TenantUser {
             BookingRepository bookingRepository,
             CreditUserRepository creditUserRepository,
             TransferCreditService transferCreditService,
-            FlightPath flightPathService
+            FlightPath flightPathService,
+            @Qualifier("userBucket") Bucket userBucket,
+            Bucket travelBucket,
+            Transactions transactions
+
     ) {
         this.jwtService = tokenService;
         this.userRepository = userRepository;
@@ -75,6 +94,9 @@ public class TenantUser {
         this.inferCreditService = inferCreditService;
         this.transferCreditService = transferCreditService;
         this.flightPathService = flightPathService;
+        this.travelBucket = travelBucket;
+        this.userBucket = userBucket;
+        this.transactions = transactions;
     }
 
     @Value("${sqlite.using}")
@@ -128,7 +150,7 @@ public class TenantUser {
      * Test case 1: 1 Exception require ROLLBACK all transaction
      */
     @Transactional
-    public Result<Map<String, Object>> registerFlightForUser(final String tenant, final String username, final JsonArray newFlights) {
+    public Result<Map<String, Object>> registerFlightForUserOld(final String tenant, final String username, final JsonArray newFlights) {
         UserRepository userRepository = this.userRepository.withScope(tenant);
         BookingRepository bookingRepository = this.bookingRepository.withScope(tenant);
         Optional<User> userDataFetch;
@@ -192,12 +214,93 @@ public class TenantUser {
         //
 
         if (remainingCredits < 0) { // check after save to investigate transaction processing
-            throw new IllegalArgumentException("Your credits is not enough!!!");
+            throw new RuntimeException("Your credits is not enough!!!");
         }
 
         // inner transaction
         flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
         //
+
+        JsonObject responseData = JsonObject.create().put("added", added);
+
+        String queryType = String.format("KV update - scoped to %s.user: for bookings field in document %s", tenant, username);
+        return Result.of(responseData.toMap(), queryType);
+    }
+
+    public Result<Map<String, Object>> registerFlightForUser(final String tenant, final String username, final JsonArray newFlights) {
+        JsonArray added = JsonArray.create();
+
+        Consumer<AttemptContext> transactionLogic = (Consumer<AttemptContext>) ctx -> {
+            TransactionGetResult bookingUserTx = ctx.get(travelBucket.scope(tenant).collection("users"), username);
+            JsonObject bookingUserDoc = bookingUserTx.contentAs(JsonObject.class);
+
+            long remainingCredits = bookingUserDoc.getInt("credits");
+            int price = 0;
+
+            JsonArray allBookedFlights = bookingUserDoc.getArray("flightIds");
+
+            Map<String, Map<String, JsonObject>> updatedQuotas = new HashMap<>();
+
+            for (Object newFlight : newFlights) {
+                checkFlight(newFlight);
+
+                JsonObject t = ((JsonObject) newFlight);
+                t.put("bookedon", "try-cb-spring");
+                added.add(t); // side effect
+
+                price += t.getInt("price");
+                remainingCredits -= t.getInt("price");
+
+                changeUpdatedQuotas(updatedQuotas, t.getString("id"), t.getString("flight"), t.getString("utc"), t.getInt("day"));
+            }
+
+            bookingUserDoc.put("credits", remainingCredits);
+            bookingUserDoc.put("flightIds", allBookedFlights);
+
+            ctx.replace(bookingUserTx, bookingUserDoc);
+
+            // transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price);
+            TransactionGetResult targetUserTx = ctx.get(userBucket.defaultCollection(), "agency_user_3");
+            JsonObject targetUserDoc = targetUserTx.contentAs(JsonObject.class);
+
+            targetUserDoc.put("credits", targetUserDoc.getInt("credits") + price);
+            ctx.replace(targetUserTx, targetUserDoc);
+
+            if (remainingCredits < 0) { // check after save to investigate transaction processing
+                throw new RuntimeException("Your credits is not enough!!!");
+            }
+
+            for (Map.Entry<String, Map<String, JsonObject>> entry : updatedQuotas.entrySet()) {
+                TransactionGetResult routeTx = ctx.get(travelBucket.scope("inventory").collection("route"), entry.getKey());
+                JsonObject route = routeTx.contentAs(JsonObject.class);
+
+                JsonArray schedules = route.getArray("schedule");
+
+                List<JsonObject> objects = new ArrayList<>();
+                for (int i = 0; i < schedules.size(); i++) {
+                    JsonObject oldObject = schedules.getObject(i);
+
+                    String k = oldObject.getString("flight") + "." + oldObject.getString("utc") + "." + oldObject.getInt("day");
+
+                    JsonObject newObject = entry.getValue().get(k);
+                    if (newObject != null) {
+                        int modifiedQuota = oldObject.getInt("quota") - newObject.getInt("quota");
+                        if (modifiedQuota < 0) {
+                            throw new RuntimeException("Quota cannot negative!!!");
+                        }
+                        oldObject.put("quota", modifiedQuota);
+                    }
+                    objects.add(oldObject);
+                }
+
+                schedules = JsonArray.from(objects);
+
+                route.put("schedule", schedules);
+
+                ctx.replace(routeTx, route);
+            }
+        };
+        transactions.run(transactionLogic);
 
         JsonObject responseData = JsonObject.create().put("added", added);
 

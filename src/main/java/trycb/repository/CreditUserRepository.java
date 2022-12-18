@@ -14,7 +14,7 @@ import java.util.Random;
 
 @Repository("creditUserRepository")
 public class CreditUserRepository {
-    private static final int AGENCY_MEMBERS = 3;
+    public static final int AGENCY_MEMBERS = 3;
 
     private final Cluster cluster;
     private final Bucket bucket;
