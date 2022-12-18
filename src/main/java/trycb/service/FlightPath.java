@@ -103,7 +103,7 @@ public class FlightPath {
                     if (newObject != null) {
                         int modifiedQuota = oldObject.getInt("quota") - newObject.getInt("quota");
                         if (modifiedQuota < 0) {
-                            throw new IllegalArgumentException("Quota cannot negative!!!");
+                            throw new RuntimeException("Quota cannot negative!!!");
                         }
                         oldObject.put("quota", modifiedQuota);
                     }
@@ -117,7 +117,11 @@ public class FlightPath {
                 ctx.replace(routeTx, route);
             }
         };
-        transactions.run(transactionLogic);
+        try {
+            transactions.run(transactionLogic);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
