@@ -39,6 +39,7 @@ import trycb.repository.BookingRepository;
 import trycb.repository.CreditUserRepository;
 import trycb.repository.UserRepository;
 
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -126,6 +127,7 @@ public class TenantUser {
      * Register a flight (or flights) for the given tenant user.
      * Test case 1: 1 Exception require ROLLBACK all transaction
      */
+    @Transactional
     public Result<Map<String, Object>> registerFlightForUser(final String tenant, final String username, final JsonArray newFlights) {
         UserRepository userRepository = this.userRepository.withScope(tenant);
         BookingRepository bookingRepository = this.bookingRepository.withScope(tenant);
@@ -180,10 +182,8 @@ public class TenantUser {
         }
         // all this must be in one transaction
 
-        // inner transaction
         userData.setFlightIds(allBookedFlights.toArray(new String[]{}));
         userData = userRepository.save(userData); // need to rolled back
-        //
 
         // inner transaction
         userData.setCredits(remainingCredits);
@@ -194,7 +194,6 @@ public class TenantUser {
         if (remainingCredits < 0) { // check after save to investigate transaction processing
             throw new IllegalArgumentException("Your credits is not enough!!!");
         }
-        //
 
         // inner transaction
         flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
