@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.UpsertOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -74,6 +75,9 @@ public class TenantUser {
         this.transferCreditService = transferCreditService;
         this.flightPathService = flightPathService;
     }
+
+    @Value("${sqlite.using}")
+    private boolean isUsingSqlite;
 
     /**
      * Try to log the given tenant user in.
@@ -173,18 +177,27 @@ public class TenantUser {
 
             changeUpdatedQuotas(updatedQuotas, t.getString("id"), t.getString("flight"), t.getString("utc"), t.getInt("day"));
         }
+        // all this must be in one transaction
 
+        // inner transaction
         userData.setFlightIds(allBookedFlights.toArray(new String[]{}));
-        userData.setCredits(remainingCredits);
-        userRepository.save(userData);
+        userData = userRepository.save(userData); // need to rolled back
+        //
 
-        transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price);
+        // inner transaction
+        userData.setCredits(remainingCredits);
+        userRepository.save(userData); // need to rolled back
+        transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price); // need to rolled back
+        //
+
+        // inner transaction
+        flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
+        //
 
         if (remainingCredits < 0) { // check after save to investigate transaction processing
             throw new IllegalArgumentException("Your credits is not enough!!!");
         }
-
-        flightPathService.updateQuotas(updatedQuotas);
+        //
 
         JsonObject responseData = JsonObject.create().put("added", added);
 
