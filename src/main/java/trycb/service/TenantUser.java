@@ -83,7 +83,7 @@ public class TenantUser {
             TransferCreditService transferCreditService,
             FlightPath flightPathService,
             @Qualifier("userBucket") Bucket userBucket,
-            Bucket travelBucket,
+            @Qualifier("tsBucket") Bucket travelBucket,
             Transactions transactions
 
     ) {
@@ -250,6 +250,8 @@ public class TenantUser {
 
                 price += t.getInt("price");
                 remainingCredits -= t.getInt("price");
+
+                allBookedFlights.add(new Booking(UUID.randomUUID().toString()).bookingId);
 
                 changeUpdatedQuotas(updatedQuotas, t.getString("id"), t.getString("flight"), t.getString("utc"), t.getInt("day"));
             }
