@@ -10,6 +10,8 @@ import com.couchbase.transactions.config.TransactionConfigBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 @Configuration
 public class CouchbaseConfig {
     private final Cluster cluster;
@@ -41,6 +43,8 @@ public class CouchbaseConfig {
                 cluster,
                 TransactionConfigBuilder.create()
                         .durabilityLevel(TransactionDurabilityLevel.NONE)
+                        .expirationTime(Duration.ofMillis(300000)) // 5 minutes
+                        .keyValueTimeout(Duration.ofMillis(15000)) // 15 seconds
                         // The configuration can be altered here, but in most cases the defaults are fine.
                         .build()
         );
