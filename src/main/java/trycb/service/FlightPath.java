@@ -121,6 +121,7 @@ public class FlightPath {
             transactions.run(transactionLogic);
         } catch (Exception e) {
             e.printStackTrace();
+            throw new RuntimeException("Quota cannot negative!!!");
         }
     }
 
