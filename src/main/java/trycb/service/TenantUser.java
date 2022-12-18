@@ -124,6 +124,7 @@ public class TenantUser {
 
     /*
      * Register a flight (or flights) for the given tenant user.
+     * Test case 1: 1 Exception require ROLLBACK all transaction
      */
     public Result<Map<String, Object>> registerFlightForUser(final String tenant, final String username, final JsonArray newFlights) {
         UserRepository userRepository = this.userRepository.withScope(tenant);
