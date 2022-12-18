@@ -191,13 +191,13 @@ public class TenantUser {
         transferCreditService.transferCredit(creditUserRepository.getAgencyMember().getId(), price); // need to rolled back
         //
 
-        // inner transaction
-        flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
-        //
-
         if (remainingCredits < 0) { // check after save to investigate transaction processing
             throw new IllegalArgumentException("Your credits is not enough!!!");
         }
+        //
+
+        // inner transaction
+        flightPathService.updateQuotas(updatedQuotas); // need to rolled back, concurrency control
         //
 
         JsonObject responseData = JsonObject.create().put("added", added);
