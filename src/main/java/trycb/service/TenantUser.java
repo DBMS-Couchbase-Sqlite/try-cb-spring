@@ -238,6 +238,9 @@ public class TenantUser {
             int price = 0;
 
             JsonArray allBookedFlights = bookingUserDoc.getArray("flightIds");
+            if (allBookedFlights == null) {
+                allBookedFlights = JsonArray.create();
+            }
 
             Map<String, Map<String, JsonObject>> updatedQuotas = new HashMap<>();
 
@@ -246,12 +249,26 @@ public class TenantUser {
 
                 JsonObject t = ((JsonObject) newFlight);
                 t.put("bookedon", "try-cb-spring");
+
+                Booking booking = new Booking(UUID.randomUUID().toString());
+                booking.name = t.getString("name");
+                booking.sourceairport = t.getString("sourceairport");
+                booking.destinationairport = t.getString("destinationairport");
+                booking.flight = t.getString("flight");
+                booking.utc = t.getString("utc");
+                booking.airlineid = t.getString("airlineid");
+                booking.date = t.getString("date");
+                booking.price = t.getInt("price");
+                booking.day = t.getInt("day");
+
+                ctx.insert(travelBucket.scope(tenant).collection("bookings"), booking.bookingId, booking);
+
                 added.add(t); // side effect
 
                 price += t.getInt("price");
                 remainingCredits -= t.getInt("price");
 
-                allBookedFlights.add(new Booking(UUID.randomUUID().toString()).bookingId);
+                allBookedFlights.add(booking.bookingId);
 
                 changeUpdatedQuotas(updatedQuotas, t.getString("id"), t.getString("flight"), t.getString("utc"), t.getInt("day"));
             }
@@ -300,9 +317,18 @@ public class TenantUser {
                 route.put("schedule", schedules);
 
                 ctx.replace(routeTx, route);
+                try {
+                    Thread.sleep(60000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         };
-        transactions.run(transactionLogic);
+        try {
+            transactions.run(transactionLogic);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         JsonObject responseData = JsonObject.create().put("added", added);
 
